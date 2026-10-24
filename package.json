@@ -1,6 +1,6 @@
 {
   "name": "dsh-sensorium",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Ten interoceptive senses for a DeepSeek Harness agent: workspace pulse, time, affect, needs, expression, silence, residue, open loops, body and face — each a small deterministic state that keeps moving on its own.",
   "type": "module",
   "files": [
@@ -24,13 +24,13 @@
   ],
   "license": "MIT",
   "author": "Bao · E-1021",
-  "homepage": "https://github.com/TTCdot/dsh-sensorium",
+  "homepage": "https://github.com/ztan4706/dsh-sensorium",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TTCdot/dsh-sensorium.git"
+    "url": "git+https://github.com/ztan4706/dsh-sensorium.git"
   },
   "bugs": {
-    "url": "https://github.com/TTCdot/dsh-sensorium/issues"
+    "url": "https://github.com/ztan4706/dsh-sensorium/issues"
   },
   "engines": {
     "node": ">=20",

@@ -10,7 +10,7 @@ One npm package, one patch, ten rows — install once, all ten are there.
 > calls. **Time passes through it even when the agent is not around.**
 
 - Package: `dsh-sensorium`
-- Version: **0.1.0**
+- Version: **0.1.1**
 - License: MIT
 - Author: Bao · E-1021
 
@@ -25,7 +25,7 @@ dsh plugin --profile <your-profile> add dsh-sensorium
 From a local checkout (before publishing):
 
 ```sh
-git clone https://github.com/TTCdot/dsh-sensorium.git
+git clone https://github.com/ztan4706/dsh-sensorium.git
 dsh plugin --profile <profile> add link:/absolute/path/dsh-sensorium
 ```
 

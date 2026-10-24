@@ -2,6 +2,13 @@
 
 Versioning is `MAJOR.MINOR.PATCH`: incompatible change / new behavior / fix.
 
+## 0.1.1 — 2026-10-24
+
+- The repository links in `package.json` now point at the real remote
+  (`github.com/ztan4706/dsh-sensorium`). 0.1.0 was published while a
+  placeholder account name was still there, so its npm page linked to a 404.
+  No code change.
+
 ## 0.1.0 — 2026-10-24
 
 English-only output, and no path guessing.
