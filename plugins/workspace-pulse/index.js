@@ -14,6 +14,12 @@ const TICK_MS = 2 * 60 * 1000
 export function apply(ctx, config = {}) {
   const workspace = config.workspace || DEFAULT_WORKSPACE
 
+  // 装完忘了配 workspace 时，默认会落到进程的 cwd——在 DSH 里那通常是 profile 目录。
+  // 与其默默把状态写进别人家里，不如吵一句。
+  if (!config.workspace && /[\\/]\.dsh[\\/]profiles[\\/]/i.test(workspace)) {
+    console.warn(`[sensorium] workspace 落到了 profile 目录（${workspace}）：请设 config.workspace 或 SENSORIUM_WORKSPACE。`)
+  }
+
   // 诊断标记：插件每次被宿主加载/热重载时留一笔，方便确认挂载成功。
   const sensoryDir = join(workspace, '.dsh', 'sensory')
   mkdir(sensoryDir, { recursive: true })

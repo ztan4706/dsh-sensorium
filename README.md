@@ -52,6 +52,9 @@ dsh plugin --profile <profile> add link:/绝对路径/dsh-sensorium
 2. 环境变量 `SENSORIUM_WORKSPACE`
 3. 不填，用进程的 `process.cwd()`
 
+> ⚠️ 第 3 条只是兜底。在 DSH 里宿主进程的 cwd 常常是应用目录或 profile 目录，
+> 状态会写错地方。0.0.1 起会在 console 里喊一句提醒；正式用请显式配 `workspace`。
+
 只想开其中几个？按 id 关掉其余的：
 
 ```yaml
@@ -115,6 +118,7 @@ node tests/selftest.mjs    # 跨感官回归：时间是否真的会走
 - `dialogue` 里"这句是不是这个工作区的"依赖 session 的 cwd；拿不到时会退化成"都算"。
 - 没有 UI。这些是状态和工具，不是界面。
 - 参数是拍的，不是拟合的。想要别的节奏，改各插件文件顶上的常量。
+- 和别的插件共存的问题、自查清单，见 [`docs/兼容性.md`](docs/兼容性.md)。
 
 ## 许可
 

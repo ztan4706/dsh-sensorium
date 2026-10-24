@@ -9,6 +9,12 @@ const DEFAULT_WORKSPACE = process.env.SENSORIUM_WORKSPACE || process.cwd()
 export function apply(ctx, config = {}) {
   const workspace = config.workspace || DEFAULT_WORKSPACE
 
+  // 装完忘了配 workspace 时，默认会落到进程的 cwd——在 DSH 里那通常是 profile 目录。
+  // 与其默默把状态写进别人家里，不如吵一句。
+  if (!config.workspace && /[\\/]\.dsh[\\/]profiles[\\/]/i.test(workspace)) {
+    console.warn(`[sensorium] workspace 落到了 profile 目录（${workspace}）：请设 config.workspace 或 SENSORIUM_WORKSPACE。`)
+  }
+
   ctx.tools.register({
     name: 'sense_residue_trace',
     description:
