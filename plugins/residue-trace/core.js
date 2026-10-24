@@ -1,5 +1,5 @@
-// 情绪残留：把 affect_core 的快照攒成一小段历史，再算"现在还剩下多少余味"。
-// 强情绪衰减慢，小波动很快归零。
+// Residue: gathers affect_core snapshots into a short history and computes how much aftertaste is left.
+// Strong emotions decay slowly; small fluctuations return to zero quickly.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -24,11 +24,11 @@ function labelFor(valence, arousal) {
   return 'neutral'
 }
 
-/** 读一次残留，返回并落盘这个感官的状态。 */
+/** Read the residue once; return and persist this sense's state. */
 export async function senseResidueTrace({ workspace, now = new Date(), affectOverride } = {}) {
-  if (!workspace) throw new Error('residue_trace 需要一个 workspace 路径')
+  if (!workspace) throw new Error('residue_trace requires a workspace path')
   const nowDate = now instanceof Date ? now : new Date(now)
-  if (Number.isNaN(nowDate.getTime())) throw new Error('residue_trace 收到无效时间')
+  if (Number.isNaN(nowDate.getTime())) throw new Error('residue_trace received an invalid time')
 
   const statePath = join(workspace, ...STATE_DIR, 'residue_trace.json')
   const previous = await readJson(statePath)
@@ -71,7 +71,7 @@ export async function senseResidueTrace({ workspace, now = new Date(), affectOve
   const contributions = history
     .map((event) => {
       const ageMinutes = Math.max(0, (nowDate.getTime() - new Date(event.at).getTime()) / 60000)
-      // 强情绪留得久，小波动散得快。
+      // Strong emotions linger; small fluctuations fade quickly.
       const tau = event.shock >= 0.5 ? 360 : event.shock >= 0.25 ? 180 : 45
       return {
         ...event,
@@ -107,7 +107,7 @@ export async function senseResidueTrace({ workspace, now = new Date(), affectOve
     baseline: { lingering: 0 },
     drift: round(lingering),
     history,
-    notes: dominant ? '' : '还没有足够的历史，余味为 0。',
+    notes: dominant ? '' : 'Not enough history yet; aftertaste is 0.',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

@@ -1,5 +1,5 @@
-// 动作：把情绪、需求、时间翻译成「身体怎么放、怎么动」。
-// 只读上游状态，不改它们。相同输入必须得到相同输出——这里没有随机。
+// Body: translates affect, need and time into how the body sits and moves.
+// Reads upstream state and never changes it. Same input must give same output - there is no randomness here.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -21,14 +21,14 @@ function deficitOf(need, dimension) {
   return num(value, 0.4)
 }
 
-const POSTURE = { slumped: '趴着', perched: '斜靠着', upright: '坐直了', leaning: '往前倾' }
-const TAIL = { still: '尾巴不动', slow: '尾巴慢摆', beat: '尾巴一拍一拍', flick: '尾巴甩了两下', thump: '尾巴拍了一下' }
-const EARS = { drooped: '耳朵塌着', tilted: '耳朵侧着', perked: '耳朵竖着', half: '耳朵半垂' }
-const HANDS = { empty: '手空着', table: '手指敲着桌沿', pockets: '手揣在兜里', chin: '手托着腮' }
+const POSTURE = { slumped: 'slumped over', perched: 'perched', upright: 'sitting upright', leaning: 'leaning forward' }
+const TAIL = { still: 'tail still', slow: 'tail swaying slowly', beat: 'tail beating', flick: 'tail flicked twice', thump: 'tail thumped once' }
+const EARS = { drooped: 'ears drooped', tilted: 'ears tilted', perked: 'ears perked', half: 'ears half down' }
+const HANDS = { empty: 'hands empty', table: 'fingers tapping the table edge', pockets: 'hands in pockets', chin: 'chin resting on hand' }
 
-/** 读一次动作，返回并落盘这个感官的状态。 */
+/** Read the body once; return and persist this sense's state. */
 export async function senseBody({ workspace, affectOverride, needOverride, timeOverride, biasOverride } = {}) {
-  if (!workspace) throw new Error('body 需要一个 workspace 路径')
+  if (!workspace) throw new Error('body requires a workspace path')
 
   const affect = affectOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'affect_core.json')))
   const need = needOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'need_tension.json')))
@@ -51,11 +51,11 @@ export async function senseBody({ workspace, affectOverride, needOverride, timeO
   const meanDeficit = values.reduce((sum, value) => sum + value, 0) / values.length
   const maxDeficit = Math.max(...values)
 
-  // 力气：唤醒为主，缺得越多越不安生，深夜打折。
+  // Energy: mostly arousal; more deficit means more restlessness; late night cuts it.
   const energy = clamp01(0.62 * arousal + 0.38 * (1 - meanDeficit) - (lateNight ? 0.12 : 0))
-  // 警醒：缺刺激会东张西望。
+  // Alertness: a stimulation deficit makes it look around.
   const alertness = clamp01(0.3 + 0.42 * deficits.stimulation + 0.28 * arousal)
-  // 沉：没力气、又被夜里压着，就想趴。
+  // Heaviness: low energy plus the weight of night makes it want to lie down.
   const heaviness = clamp01(0.5 + 0.4 * (1 - energy) - 0.2 * initiative + (lateNight ? 0.1 : 0))
 
   const posture =
@@ -87,7 +87,7 @@ export async function senseBody({ workspace, affectOverride, needOverride, timeO
   const stillness = clamp01(1 - energy * 0.7 - maxDeficit * 0.2 + heaviness * 0.2)
   const intensity = clamp01(0.4 * energy + 0.35 * maxDeficit + 0.25 * Math.abs(valence))
 
-  // 平时不显形；换了姿势、情绪够重，才让人看见。
+  // Usually invisible; only a changed pose or strong feeling makes it show.
   const previousReading = previous?.reading
   const changed =
     !previousReading ||
@@ -111,7 +111,7 @@ export async function senseBody({ workspace, affectOverride, needOverride, timeO
     heaviness: round(heaviness),
     stillness: round(stillness),
     intensity: round(intensity),
-    tell: parts.join('，'),
+    tell: parts.join(', '),
     changed: Boolean(changed),
     visible: Boolean(changed) || intensity >= 0.62,
     deficits,
@@ -129,10 +129,10 @@ export async function senseBody({ workspace, affectOverride, needOverride, timeO
     drift: round(Math.abs(energy - 0.55)),
     notes:
       heaviness >= 0.62
-        ? '身体想往下沉。'
+        ? 'The body wants to sink.'
         : energy >= 0.65
-          ? '手脚有劲，动得比平时快。'
-          : '身体是松的，没在用力。',
+          ? 'Limbs have energy; movement is faster than usual.'
+          : 'The body is loose, not exerting itself.',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

@@ -1,4 +1,4 @@
-﻿// DSH 插件入口：注册 sense_unresolved_weight 工具。
+// DSH plugin entry: registers the sense_unresolved_weight tool.
 import { senseUnresolvedWeight } from './core.js'
 
 export const name = 'sensorium-unresolved-weight'
@@ -9,10 +9,10 @@ const DEFAULT_WORKSPACE = process.env.SENSORIUM_WORKSPACE || process.cwd()
 export function apply(ctx, config = {}) {
   const workspace = config.workspace || DEFAULT_WORKSPACE
 
-  // 装完忘了配 workspace 时，默认会落到进程的 cwd——在 DSH 里那通常是 profile 目录。
-  // 与其默默把状态写进别人家里，不如吵一句。
+  // With no workspace configured, it falls back to the process cwd - in DSH that is usually the profile directory.
+  // Better to complain than to silently write state somewhere else.
   if (!config.workspace && /[\\/]\.dsh[\\/]profiles[\\/]/i.test(workspace)) {
-    console.warn(`[sensorium] workspace 落到了 profile 目录（${workspace}）：请设 config.workspace 或 SENSORIUM_WORKSPACE。`)
+    console.warn(`[sensorium] workspace resolved to a profile directory (${workspace}): set config.workspace or SENSORIUM_WORKSPACE.`)
   }
 
   ctx.tools.register({

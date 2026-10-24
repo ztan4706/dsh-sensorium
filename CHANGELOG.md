@@ -2,6 +2,23 @@
 
 Versioning is `MAJOR.MINOR.PATCH`: incompatible change / new behavior / fix.
 
+## 0.1.0 — 2026-10-24
+
+English-only output, and no path guessing.
+
+- Every human-readable string these tools return is now English: the body and face
+  description words (`slumped over`, `tail swaying slowly`, `ears half down`) and
+  the need-tension hints (`A little empty`, `A little bored`,
+  `Something is unresolved`). Tool output no longer mixes languages.
+- All code comments, the bundle patch comments and the test notes are English too.
+- `need_tension` no longer looks one directory up for the pulse. Each sense reads
+  and writes only `<workspace>/.dsh/sensory/`; a plugin that wants the house pulse
+  is configured with the house as its workspace, which is what `workspace-pulse`
+  does. The old "local first, then parent" fallback was an assumption about a
+  house-with-rooms layout that no other user has.
+- Tests updated: the busy-window case writes the pulse into its own workspace, and
+  an added assertion proves a pulse one level up is ignored.
+
 ## 0.0.1 — 2026-10-24
 
 First public version.

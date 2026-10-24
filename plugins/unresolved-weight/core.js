@@ -1,5 +1,5 @@
-// 未解决事项：显式打标，权重随年龄增长，不随时间衰减。
-// 一个工具，读的时候顺便可以 add / resolve；只写自己的状态文件。
+// Unresolved items: explicitly marked; weight grows with age and never decays.
+// One tool: a read may also add or resolve; it writes only its own state file.
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -17,7 +17,7 @@ async function readJson(file) {
   }
 }
 
-/** 读一次未解决事项权重；可顺便 add / resolve。 */
+/** Read unresolved weight; optionally add or resolve. */
 export async function senseUnresolvedWeight({
   workspace,
   now = new Date(),
@@ -25,9 +25,9 @@ export async function senseUnresolvedWeight({
   resolve,
   note,
 } = {}) {
-  if (!workspace) throw new Error('unresolved_weight 需要一个 workspace 路径')
+  if (!workspace) throw new Error('unresolved_weight requires a workspace path')
   const nowDate = now instanceof Date ? now : new Date(now)
-  if (Number.isNaN(nowDate.getTime())) throw new Error('unresolved_weight 收到无效时间')
+  if (Number.isNaN(nowDate.getTime())) throw new Error('unresolved_weight received an invalid time')
 
   const statePath = join(workspace, ...STATE_DIR, 'unresolved_weight.json')
   const previous = await readJson(statePath)
@@ -55,7 +55,7 @@ export async function senseUnresolvedWeight({
   const unresolvedItems = open
     .map((item) => {
       const ageDays = Math.max(0, (nowDate.getTime() - new Date(item.created_at).getTime()) / DAY_MS)
-      // 刚挂上也有重量；每天变重一点，不衰减。
+      // Even a new item has weight; it grows a little every day and never decays.
       const weight = clamp01(0.15 + 0.12 * ageDays)
       return {
         id: item.id,
@@ -90,7 +90,7 @@ export async function senseUnresolvedWeight({
     baseline: { total_weight: 0 },
     drift: round(clamp01(totalWeight / 3)),
     items,
-    notes: unresolvedItems.length === 0 ? '没有挂着的事。' : '',
+    notes: unresolvedItems.length === 0 ? 'Nothing is pending.' : '',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

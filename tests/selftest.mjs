@@ -1,6 +1,6 @@
-// 感官 v2 自测：验"时间真的从我身上走过去"这件事。
-// 用法：node 感官/_v2_selftest.mjs
-// 全部在临时目录里跑，不碰真状态。
+// Senses v2 self-test: checks that time actually passes through me.
+// Usage: node tests/selftest.mjs
+// Everything runs in temp directories, never real state.
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, utimes } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -30,10 +30,10 @@ function slotsBetween(from, to, activity) {
   return samples
 }
 
-// ── 1. 有动静的 10 小时要补回来 ─────────────────────────────
+// -- 1. Ten busy hours must be replenished -----------------------------
 const busy = slotsBetween(T0, T0 + 600 * MIN, 0.6)
-await writeJson(join(houseSensory, 'pulse_samples.json'), { samples: busy })
-await writeJson(join(houseSensory, 'workspace_pulse.json'), {
+await writeJson(join(roomSensory, 'pulse_samples.json'), { samples: busy })
+await writeJson(join(roomSensory, 'workspace_pulse.json'), {
   reading: { activity_level: 0.6, quiet_minutes: 5 },
 })
 await writeJson(join(roomSensory, 'need_tension.json'), {
@@ -47,13 +47,15 @@ await writeJson(join(roomSensory, 'need_tension.json'), {
 })
 
 const busyState = await senseNeedTension({ workspace: room, now: new Date(T0 + 600 * MIN) })
-assert.equal(busyState.reading.basis, 'samples', '有动静的窗口 basis 应是 samples')
-assert.equal(busyState.reading.windows_integrated, 20, '10 小时应结算 20 格')
-assert.ok(busyState.reading.active_windows >= 19, '绝大多数格子应有动静')
-assert.ok(busyState.reading.connection.saturation > 0.5, '忙了一天，连接不该是空的')
+assert.equal(busyState.reading.basis, 'samples', 'a busy window should have basis samples')
+assert.equal(busyState.reading.windows_integrated, 20, '10 hours should settle 20 slots')
+assert.ok(busyState.reading.active_windows >= 19, 'most slots should be active')
+assert.ok(busyState.reading.connection.saturation > 0.5, 'after a busy day, connection should not be empty')
 
-// ── 2. 空转的 15 小时只衰减 ─────────────────────────────────
-await writeFile(join(houseSensory, 'pulse_samples.json'), JSON.stringify({ samples: [] }), 'utf8')
+// -- 2. Fifteen idle hours decay only ---------------------------------
+await writeFile(join(roomSensory, 'pulse_samples.json'), JSON.stringify({ samples: [] }), 'utf8')
+// A pulse one level up must be ignored: each sense reads only its own workspace.
+await writeJson(join(houseSensory, 'pulse_samples.json'), { samples: busy })
 await writeJson(join(roomSensory, 'need_tension.json'), {
   last_read: new Date(T0).toISOString(),
   last_integrated: new Date(T0).toISOString(),
@@ -64,11 +66,11 @@ await writeJson(join(roomSensory, 'need_tension.json'), {
   },
 })
 const idle = await senseNeedTension({ workspace: room, now: new Date(T0 + 900 * MIN) })
-assert.equal(idle.reading.basis, 'decay_only', '没人理的窗口 basis 应是 decay_only')
-assert.equal(idle.reading.windows_integrated, 30, '15 小时应结算 30 格')
-assert.ok(idle.reading.connection.deficit > 0.9, '15 小时空转，连接应见底')
+assert.equal(idle.reading.basis, 'decay_only', 'an untouched window should have basis decay_only')
+assert.equal(idle.reading.windows_integrated, 30, '15 hours should settle 30 slots')
+assert.ok(idle.reading.connection.deficit > 0.9, 'after 15 idle hours, connection should bottom out')
 
-// ── 3. 房东说话算连接 ───────────────────────────────────────
+// -- 3. The user speaking counts as connection -----------------------
 await writeFile(
   join(roomSensory, 'dialogue.jsonl'),
   [
@@ -90,11 +92,11 @@ await writeJson(join(roomSensory, 'need_tension.json'), {
   },
 })
 const talked = await senseNeedTension({ workspace: room, now: new Date(T0 + 60 * MIN) })
-assert.equal(talked.reading.dialogue_turns, 2, '只算自己的那句，Echo 的不算')
-assert.equal(talked.reading.basis, 'dialogue', '只有对话没有动静时 basis 应是 dialogue')
-assert.ok(talked.reading.connection.saturation > 0.5, '被叫了两声，连接应回暖')
+assert.equal(talked.reading.dialogue_turns, 2, 'only my own turns count, not the turns from Echo')
+assert.equal(talked.reading.basis, 'dialogue', 'dialogue without activity should have basis dialogue')
+assert.ok(talked.reading.connection.saturation > 0.5, 'after two calls, connection should warm')
 
-// ── 4. 情绪内核：被说话有一点暖 ────────────────────────────
+// -- 4. Affect core: being spoken to leaves a little warmth ------------
 await writeJson(join(roomSensory, 'affect_core.json'), {
   last_read: new Date(T0).toISOString(),
   last_integrated: new Date(T0).toISOString(),
@@ -102,10 +104,10 @@ await writeJson(join(roomSensory, 'affect_core.json'), {
 })
 const affect = await senseAffectCore({ workspace: room, now: new Date(T0 + 65 * MIN) })
 assert.ok(Number.isFinite(affect.reading.valence))
-assert.ok(affect.reading.warmth.dialogue_turns >= 1, '内核应看见对话')
+assert.ok(affect.reading.warmth.dialogue_turns >= 1, 'the core should see the dialogue')
 assert.ok(affect.reading.valence >= -1 && affect.reading.valence <= 1)
 
-// ── 5. 脉搏自己会走 + 回填 ─────────────────────────────────
+// -- 5. The pulse runs on its own + backfill -------------------------
 const pulseRoom = join(root, 'pulse-room')
 await mkdir(join(pulseRoom, 'src'), { recursive: true })
 for (const name of ['a.md', 'b.md', 'c.md']) {
@@ -113,10 +115,10 @@ for (const name of ['a.md', 'b.md', 'c.md']) {
   await utimes(join(pulseRoom, 'src', name), new Date(), new Date(T0 + 3 * MIN))
 }
 const pulse1 = await senseWorkspacePulse({ workspace: pulseRoom, now: T0 + 5 * MIN })
-assert.ok(pulse1.reading.samples > 40, '没有历史时应回填 24 小时采样')
-assert.ok(pulse1.reading.activity_level > 0, '刚改过文件，活动度应大于 0')
+assert.ok(pulse1.reading.samples > 40, 'without history it should backfill 24 hours of samples')
+assert.ok(pulse1.reading.activity_level > 0, 'files just changed, so activity should be above 0')
 const pulse2 = await senseWorkspacePulse({ workspace: pulseRoom, now: T0 + 7 * MIN })
-assert.ok(pulse2.reading.samples >= pulse1.reading.samples, '采样应持续累积')
+assert.ok(pulse2.reading.samples >= pulse1.reading.samples, 'samples should keep accumulating')
 
 console.log(JSON.stringify({ busy: busyState.reading, idle: idle.reading, talked: talked.reading, affect: affect.reading }, null, 2))
-console.log('\n感官 v2 self-test: ok')
+console.log('\nsenses v2 self-test: ok')

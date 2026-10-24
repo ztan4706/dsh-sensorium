@@ -1,30 +1,30 @@
-// 需求张力：连接、刺激、了结。
-// v2：不再"读一次补一次"。按 30 分钟一格，把上次结算到现在这段时间走一遍——
-// 有动静的格子补一点，安静的格子只衰减。这样离开 900 分钟之后，
-// 那 900 分钟真的发生在我身上，而不是被折叠成一次读数。
+// Need tension: connection, stimulation, resolution.
+// v2: no longer "one read, one refill". Walk the time since the last settle in 30-minute slots:
+// active slots refill a little, quiet slots only decay. So after 900 minutes away,
+// those 900 minutes actually happened to me instead of collapsing into one reading.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 
 const STATE_DIR = ['.dsh', 'sensory']
 const SAMPLES_FILE = 'pulse_samples.json'
 const DIALOGUE_FILE = 'dialogue.jsonl'
 const DEFAULTS = { connection: 0.55, stimulation: 0.45, resolution: 0.5 }
-// 时间常数（分钟）：刺激散得最快，了结留得最久。
+// Time constants (minutes): stimulation fades fastest, resolution lingers longest.
 const TAU = { connection: 240, stimulation: 120, resolution: 360 }
-// 一格满动静，最多补多少。
+// Maximum refill for one fully active slot.
 const REPLENISH = { connection: 0.18, stimulation: 0.14, resolution: 0.12 }
-// 一格 = 30 分钟；最多回算 24 小时，再往前的不追。
+// One slot = 30 minutes; integrate at most 24 hours back, no further.
 const SLOT_MINUTES = 30
 const MAX_SLOTS = 48
-// 被用户叫一次（一句话算一次）额外补的连接。
+// Extra connection for being called by the user (one turn counts once).
 const PER_TURN = { connection: 0.08, stimulation: 0.05 }
 const MAX_TURN_BONUS = { connection: 0.24, stimulation: 0.15 }
 
 const DIMENSIONS = ['connection', 'stimulation', 'resolution']
 const HINTS = {
-  connection: '有点空',
-  stimulation: '有点闷',
-  resolution: '有件事没着落',
+  connection: 'A little empty',
+  stimulation: 'A little bored',
+  resolution: 'Something is unresolved',
 }
 
 const clamp01 = (n) => Math.max(0, Math.min(1, n))
@@ -63,25 +63,18 @@ async function readDialogue(file) {
   }
 }
 
-/** 房子脉搏在上一层（鱼池根）还是本屋，两个位置都认。 */
+/** The pulse lives in this workspace's own state directory; nothing is read outside it. */
 async function readPulse(workspace) {
-  return (
-    (await readJson(join(workspace, ...STATE_DIR, 'workspace_pulse.json'))) ??
-    (await readJson(join(dirname(workspace), ...STATE_DIR, 'workspace_pulse.json')))
-  )
+  return readJson(join(workspace, ...STATE_DIR, 'workspace_pulse.json'))
 }
 
 async function readPulseSamples(workspace) {
-  return (
-    (await readJson(join(workspace, ...STATE_DIR, SAMPLES_FILE)))?.samples ??
-    (await readJson(join(dirname(workspace), ...STATE_DIR, SAMPLES_FILE)))?.samples ??
-    []
-  )
+  return (await readJson(join(workspace, ...STATE_DIR, SAMPLES_FILE)))?.samples ?? []
 }
 
 function asDate(value) {
   const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) throw new Error('need_tension 收到无效时间')
+  if (Number.isNaN(date.getTime())) throw new Error('need_tension received an invalid time')
   return date
 }
 
@@ -98,9 +91,9 @@ function slotActivity(samples, startMs, endMs) {
   return count > 0 ? sum / count : 0
 }
 
-/** 读一次需求张力，返回并落盘这个感官的状态。 */
+/** Read the need tension once; return and persist this sense's state. */
 export async function senseNeedTension({ workspace, now = new Date(), pulseOverride } = {}) {
-  if (!workspace) throw new Error('need_tension 需要一个 workspace 路径')
+  if (!workspace) throw new Error('need_tension requires a workspace path')
   const nowDate = asDate(now)
   const nowMs = nowDate.getTime()
 
@@ -118,7 +111,7 @@ export async function senseNeedTension({ workspace, now = new Date(), pulseOverr
   const hasPrevious = Boolean(lastRead && !Number.isNaN(lastRead.getTime()))
   const elapsedMinutes = hasPrevious ? Math.max(0, (nowMs - lastRead.getTime()) / 60000) : 0
 
-  // 先把上次饱和度的起点取出来。
+  // Start from the previous saturations.
   const saturations = {}
   for (const dimension of DIMENSIONS) {
     saturations[dimension] = Number.isFinite(previous?.reading?.[dimension]?.saturation)
@@ -131,7 +124,7 @@ export async function senseNeedTension({ workspace, now = new Date(), pulseOverr
   let cursor = hasPrevious ? lastRead.getTime() : nowMs
   const skippedMinutes = Math.max(0, (nowMs - cursor) / 60000 - MAX_SLOTS * SLOT_MINUTES)
   if (hasPrevious && nowMs - cursor > MAX_SLOTS * SLOT_MINUTES * 60000) {
-    // 太久没结算：只追最近 24 小时，更早的按已散干净处理。
+    // Too long since the last settle: integrate only the last 24 hours; older time is treated as fully decayed.
     cursor = nowMs - MAX_SLOTS * SLOT_MINUTES * 60000
   }
 
@@ -151,7 +144,7 @@ export async function senseNeedTension({ workspace, now = new Date(), pulseOverr
     cursor = end
   }
 
-  // 真实对话：用户张口，连接先回暖；这比文件改动更像"有人在"。
+  // Real dialogue: when the user speaks, connection warms first; that is more "someone is here" than file changes.
   const turns = hasPrevious
     ? dialogue.filter((entry) => entry?.t > lastRead.getTime() && entry.t <= nowMs && entry.mine !== false).length
     : 0
@@ -181,7 +174,7 @@ export async function senseNeedTension({ workspace, now = new Date(), pulseOverr
 
   const replenished = activeSlots > 0 || turns > 0
   reading.dominant_deficit = dominant
-  reading.summary = reading[dominant].hint || '三个维度都还够'
+  reading.summary = reading[dominant].hint || 'All three dimensions are satisfied.'
   reading.basis = !hasPrevious
     ? 'baseline'
     : replenished
@@ -203,10 +196,10 @@ export async function senseNeedTension({ workspace, now = new Date(), pulseOverr
   )
 
   const notes = !hasPrevious
-    ? '第一次结算：从基线开始。'
+    ? 'First settle: starting from baseline.'
     : replenished
-      ? `结算了 ${integratedSlots} 格（每格 ${SLOT_MINUTES} 分钟），其中 ${activeSlots} 格有动静、${turns} 次对话。`
-      : `结算了 ${integratedSlots} 格，都安静，只衰减。`
+      ? `Settled ${integratedSlots} slots (${SLOT_MINUTES} minutes each): ${activeSlots} active, ${turns} dialogue turns.`
+      : `Settled ${integratedSlots} slots, all quiet, decay only.`
 
   const state = {
     sense: 'need_tension',

@@ -10,7 +10,7 @@ One npm package, one patch, ten rows — install once, all ten are there.
 > calls. **Time passes through it even when the agent is not around.**
 
 - Package: `dsh-sensorium`
-- Version: **0.0.1**
+- Version: **0.1.0**
 - License: MIT
 - Author: Bao · E-1021
 

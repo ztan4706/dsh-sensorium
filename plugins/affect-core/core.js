@@ -1,7 +1,7 @@
-// 效价-唤醒-支配度内核。
-// v2：不再只看"此刻"——从上次结算到现在这段窗口里的平均动静才算环境，
-// 用户说过话会留一点暖。衰减仍是闭式，所以离开多久都算得清。
-// 不根据"当前这句话"跳变——这是内部状态，不是台词。
+// Valence-arousal-dominance core.
+// v2: no longer just "this instant" - the environment is the average activity in the window since the last settle,
+// A user speaking leaves a little warmth. Decay is still closed-form, so any absence can be accounted for.
+// It does not jump on "this sentence" - this is internal state, not a script line.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
@@ -9,10 +9,10 @@ const STATE_DIR = ['.dsh', 'sensory']
 const SAMPLES_FILE = 'pulse_samples.json'
 const DIALOGUE_FILE = 'dialogue.jsonl'
 const DEFAULTS = { valence: 0.05, arousal: 0.35, dominance: 0.55 }
-// 衰减时间常数（分钟）：唤醒散得最快，效价留得最久。
+// Decay time constants (minutes): arousal fades fastest, valence lingers longest.
 const TAU = { valence: 180, arousal: 45, dominance: 120 }
 const AXES = ['valence', 'arousal', 'dominance']
-// 环境扰动刻意做小：窗户里的温度一天最多摇 ±0.05。
+// Environmental perturbation is deliberately small: the window temperature swings by at most 0.05 in either direction per day.
 const MAX_PERTURBATION = 0.05
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n))
@@ -84,13 +84,13 @@ function windowActivity(samples, startMs, endMs) {
 
 function asDate(value) {
   const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) throw new Error('affect_core 收到无效时间')
+  if (Number.isNaN(date.getTime())) throw new Error('affect_core received an invalid time')
   return date
 }
 
-/** 读一次内核，返回并落盘这个感官的状态。 */
+/** Read the core once; return and persist this sense's state. */
 export async function senseAffectCore({ workspace, now = new Date(), baseline: baselineOverride } = {}) {
-  if (!workspace) throw new Error('affect_core 需要一个 workspace 路径')
+  if (!workspace) throw new Error('affect_core requires a workspace path')
   const nowDate = asDate(now)
   const nowMs = nowDate.getTime()
 
@@ -113,7 +113,7 @@ export async function senseAffectCore({ workspace, now = new Date(), baseline: b
     decayed[axis] = baseline[axis] + (previousValue - baseline[axis]) * Math.exp(-elapsedMinutes / TAU[axis])
   }
 
-  // 环境扰动代理：这段窗口平均有多热闹。没有采样时退回"此刻"的读数。
+  // Perturbation proxy: how busy the window was on average. With no samples, fall back to the current reading.
   const windowAverage = hasPrevious ? windowActivity(samples, lastRead.getTime(), nowMs) : null
   const currentActivity = Number.isFinite(pulse?.reading?.activity_level) ? pulse.reading.activity_level : 0
   const currentQuiet = Number.isFinite(pulse?.reading?.quiet_minutes) ? pulse.reading.quiet_minutes : Infinity
@@ -165,9 +165,9 @@ export async function senseAffectCore({ workspace, now = new Date(), baseline: b
     baseline,
     drift: round(drift),
     notes: !hasPrevious
-      ? '首次读数：以内核基线为起点。'
+      ? 'First reading: starting from the core baseline.'
       : windowAverage === null
-        ? '没有采样，环境只用此刻的读数。'
+        ? 'No samples; the environment uses only the current reading.'
         : '',
   }
 

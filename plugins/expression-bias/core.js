@@ -1,5 +1,5 @@
-// 表达偏置：把 affect_core 和 need_tension 翻译成"怎么说"的倾向。
-// 只读上游状态，不改它们。相同输入必须得到相同输出——这里没有随机。
+// Expression bias: translates affect_core and need_tension into a tendency of how to speak.
+// Reads upstream state and never changes it. Same input must give same output - there is no randomness here.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -28,9 +28,9 @@ function deficitOf(need, dimension) {
   return Number.isFinite(value) ? value : 0.4
 }
 
-/** 读一次表达偏置，返回并落盘这个感官的状态。 */
+/** Read the expression bias once; return and persist this sense's state. */
 export async function senseExpressionBias({ workspace, affectOverride, needOverride } = {}) {
-  if (!workspace) throw new Error('expression_bias 需要一个 workspace 路径')
+  if (!workspace) throw new Error('expression_bias requires a workspace path')
 
   const affect = affectOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'affect_core.json')))
   const need = needOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'need_tension.json')))
@@ -50,13 +50,13 @@ export async function senseExpressionBias({ workspace, affectOverride, needOverr
 
   const underlyingTone = toneFor(valence, arousal)
 
-  // 口是心非的强度：内在越负、越能撑住，越可能把表情收起来。
+  // Mask strength: the more negative the inside and the more it can hold, the likelier expression is withdrawn.
   const maskScore = clamp01(Math.max(0, -valence) * (0.45 + 0.55 * dominance))
   const mask = maskScore >= 0.42 ? 'strong' : maskScore >= 0.18 ? 'light' : 'none'
 
   let tone = underlyingTone
   if (mask === 'strong') {
-    // 强掩蔽时，外面可以是 neutral，甚至在缺连接时反而更 warm。
+    // Under strong masking the outside can be neutral, or even warm when connection is short.
     tone = deficits.connection > 0.55 ? 'warm' : 'neutral'
   } else if (mask === 'light' && (underlyingTone === 'terse' || underlyingTone === 'withdrawn')) {
     tone = 'neutral'
@@ -93,10 +93,10 @@ export async function senseExpressionBias({ workspace, affectOverride, needOverr
     drift: round(Math.abs(reading.initiative - baseline.initiative)),
     notes:
       mask === 'strong'
-        ? '内在偏负，但表达收住了。'
+        ? 'The inside is negative, but expression is held back.'
         : mask === 'light'
-          ? '稍微收了一点。'
-          : '里外基本一致。',
+          ? 'Held back a little.'
+          : 'Inside and outside mostly agree.',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

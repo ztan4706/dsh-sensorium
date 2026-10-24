@@ -1,5 +1,5 @@
-// 沉默闸门：读表达意愿、时间、工作区活跃度，决定"该不该开口"。
-// 这不是命令，是建议；允许不开口，是这个感官存在的理由。
+// Silence gate: reads initiative, time and workspace activity to decide whether to speak.
+// This is advice, not a command; allowing silence is the reason this sense exists.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
@@ -15,19 +15,19 @@ async function readJson(file) {
   }
 }
 
-/** 读一次沉默闸门，返回并落盘这个感官的状态。 */
+/** Read the silence gate once; return and persist this sense's state. */
 export async function senseSilenceGate({
   workspace,
   expressionOverride,
   timeOverride,
   pulseOverride,
 } = {}) {
-  if (!workspace) throw new Error('silence_gate 需要一个 workspace 路径')
+  if (!workspace) throw new Error('silence_gate requires a workspace path')
 
   const expression =
     expressionOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'expression_bias.json')))
   const time = timeOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'time_sense.json')))
-  // 房子脉搏住在鱼池根，也可能在本屋；两个位置都认。
+  // The house pulse lives at the pond root, or possibly in this room; both locations count.
   const pulse =
     pulseOverride ??
     (await readJson(join(workspace, ...STATE_DIR, 'workspace_pulse.json'))) ??
@@ -50,33 +50,33 @@ export async function senseSilenceGate({
   let confidence
 
   if (activity >= 0.7) {
-    // 对方在忙，再想说话也先不打扰。
+    // The other side is busy; do not interrupt even if inclined to speak.
     staySilent = true
-    reason = '对方在忙，不打扰。'
+    reason = 'The other side is busy; do not interrupt.'
     confidence = 0.85
   } else if (isLateNight && initiative < 0.85) {
     staySilent = true
-    reason = '太晚了，除非要紧。'
+    reason = 'Too late unless it matters.'
     confidence = 0.8
   } else if (initiative < 0.35) {
     staySilent = true
-    reason = '没那么想说话。'
+    reason = 'Not much urge to speak.'
     confidence = 0.75
   } else if (elapsed < 2 && activity >= 0.4) {
     staySilent = true
-    reason = '刚说过，别催。'
+    reason = 'Just spoke; do not push.'
     confidence = 0.7
   } else if (initiative >= 0.7) {
     staySilent = false
-    reason = '想说话，对方也不忙。'
+    reason = 'Want to speak, and the other side is not busy.'
     confidence = 0.8
   } else if (initiative >= 0.5) {
     staySilent = false
-    reason = '可以开口，但不必急。'
+    reason = 'Can speak, but no rush.'
     confidence = 0.6
   } else {
     staySilent = true
-    reason = '再等等。'
+    reason = 'Wait a little longer.'
     confidence = 0.55
   }
 
@@ -102,7 +102,7 @@ export async function senseSilenceGate({
     reading,
     baseline: { initiative: 0.5 },
     drift: round(Math.abs(initiative - 0.5)),
-    notes: '这是建议，不是命令。选择不开口，是正常输出。',
+    notes: 'This is advice, not a command. Choosing silence is a normal output.',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

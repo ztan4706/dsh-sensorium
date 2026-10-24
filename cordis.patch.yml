@@ -1,13 +1,14 @@
-# Sensorium —— 十个感官，一次装好。
+# Sensorium - ten senses, installed in one row set.
 #
-# 每一行都指向包内的相对路径（锚定在这个 patch 文件旁边），所以不需要另外
-# 安装十个包。想关掉某一个，就在自己的 profile patch 里按 id 覆盖：
+# Every row points at a relative path inside this package (resolved next to this
+# patch file), so the ten plugins do not have to be installed separately. To turn
+# one off, override it by id in your own profile patch:
 #
 #   - id: sensorium-need-tension
 #     disabled: true
 #
-# 所有行共用同一个 workspace，状态落在 <workspace>/.dsh/sensory/。
-# 给法（优先级从高到低）：config.workspace → 环境变量 SENSORIUM_WORKSPACE → 进程的 cwd。
+# All rows share one workspace; state lands in <workspace>/.dsh/sensory/.
+# Precedence: config.workspace -> SENSORIUM_WORKSPACE environment variable -> process cwd.
 - insert:
     - id: sensorium-workspace-pulse
       name: ./plugins/workspace-pulse/index.js

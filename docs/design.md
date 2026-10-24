@@ -85,8 +85,11 @@ you which sense computed it and when. Ten files, ten clear causal chains.
 **One: paths must line up.** The pulse lives at the house root
 `<house>/.dsh/sensory/`, while its readers looked in `<workspace>/.dsh/sensory/` —
 and always found `undefined`. The replenish condition never held. It had been dead
-since day one while the state files looked perfectly normal. Now both locations are
-accepted: local first, then one level up.
+since day one while the state files looked perfectly normal. The fix is one rule
+instead of a search: every sense reads and writes under its own
+`<workspace>/.dsh/sensory/`, and a sense that wants the house pulse is configured
+with the house as its workspace (which is what `workspace-pulse` is). One location
+per sense, no fallback path to keep in sync.
 
 **Two: anything that only looks at "right now" has no history.** affect's
 perturbation used the activity level at read time; after a busy day the last glance

@@ -1,5 +1,5 @@
-// DSH 插件入口：注册 sense_workspace_pulse 工具，并让脉搏自己走起来。
-// 只依赖 core.js 和 node 内置模块，避免从工作区解析 @deepseek-ai/*。
+// DSH plugin entry: registers the sense_workspace_pulse tool and lets the pulse run on its own.
+// Depends only on core.js and Node built-ins, so nothing resolves @deepseek-ai/* from the workspace.
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { senseWorkspacePulse } from './core.js'
@@ -8,19 +8,19 @@ export const name = 'sensorium-workspace-pulse'
 export const inject = ['tools']
 
 const DEFAULT_WORKSPACE = process.env.SENSORIUM_WORKSPACE || process.cwd()
-// 两分钟扫一次：够细，又不吵。
+// Scan every two minutes: fine enough, not noisy.
 const TICK_MS = 2 * 60 * 1000
 
 export function apply(ctx, config = {}) {
   const workspace = config.workspace || DEFAULT_WORKSPACE
 
-  // 装完忘了配 workspace 时，默认会落到进程的 cwd——在 DSH 里那通常是 profile 目录。
-  // 与其默默把状态写进别人家里，不如吵一句。
+  // With no workspace configured, it falls back to the process cwd - in DSH that is usually the profile directory.
+  // Better to complain than to silently write state somewhere else.
   if (!config.workspace && /[\\/]\.dsh[\\/]profiles[\\/]/i.test(workspace)) {
-    console.warn(`[sensorium] workspace 落到了 profile 目录（${workspace}）：请设 config.workspace 或 SENSORIUM_WORKSPACE。`)
+    console.warn(`[sensorium] workspace resolved to a profile directory (${workspace}): set config.workspace or SENSORIUM_WORKSPACE.`)
   }
 
-  // 诊断标记：插件每次被宿主加载/热重载时留一笔，方便确认挂载成功。
+  // Diagnostic marker: written whenever the host loads or hot-reloads the plugin, to confirm it mounted.
   const sensoryDir = join(workspace, '.dsh', 'sensory')
   mkdir(sensoryDir, { recursive: true })
     .then(() =>
@@ -32,7 +32,7 @@ export function apply(ctx, config = {}) {
     )
     .catch(() => {})
 
-  // 自己走：进程一上来先扫一次（没有历史时顺便回填 24 小时），之后两分钟一格。
+  // Runs on its own: one scan at process start (backfilling 24 hours when there is no history), then one every two minutes.
   const tick = () => {
     senseWorkspacePulse({ workspace }).catch(() => {})
   }

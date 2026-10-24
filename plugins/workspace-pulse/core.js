@@ -1,7 +1,7 @@
-// 工作区脉搏：只读文件树的元信息（名字、大小、修改时间），不读内容。
-// v2：自己会走。每 2 分钟留一个采样点，最近 24 小时按 30 分钟一个格子存着；
-// 第一次启动没有历史时，用文件 mtime 回填——这样"刚刚过去的 900 分钟"不是空白。
-// 采样另存 pulse_samples.json，状态文件保持轻，别的感官只读状态。
+// Workspace pulse: reads file-tree metadata only (name, size, mtime), never contents.
+// v2: runs on its own. It keeps one sample every 2 minutes, stored in 30-minute slots for the last 24 hours;
+// on first start with no history it backfills from file mtimes, so the last 900 minutes are not blank.
+// Samples live in pulse_samples.json so the state file stays light; other senses read only the state.
 import { readdir, stat, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 
@@ -11,7 +11,7 @@ const MAX_WALK_MS = 2500
 const RECENT_MS = 30 * 60 * 1000
 const STATE_DIR = ['.dsh', 'sensory']
 const SAMPLES_FILE = 'pulse_samples.json'
-// 采样：一格 30 分钟，留 24 小时；两次采样至少隔 60 秒，免得抖动。
+// Sampling: 30-minute slots kept for 24 hours; samples at least 60 seconds apart to avoid jitter.
 const SLOT_MS = 30 * 60 * 1000
 const SLOT_COUNT = 48
 const SAMPLE_WINDOW_MS = SLOT_MS * SLOT_COUNT
@@ -45,7 +45,7 @@ async function collectFiles(workspace) {
           const info = await stat(full)
           files.push({ path: full, size: info.size, mtimeMs: info.mtimeMs })
         } catch {
-          // 读不到就跳过，不打断整次扫描
+          // Unreadable entries are skipped; never abort the scan.
         }
       }
     }
@@ -64,8 +64,8 @@ async function readJson(file) {
 }
 
 /**
- * 没有历史采样时，用文件 mtime 反推最近 24 小时的动静。
- * 一格 30 分钟，20 个文件改动算满格——和实时 activity_level 同一把尺子。
+ * With no sample history, infer the last 24 hours of activity from file mtimes.
+ * One slot is 30 minutes; 20 changed files fill a slot - the same scale as live activity_level.
  */
 function backfillSamples(files, now) {
   const buckets = new Map()
@@ -105,9 +105,9 @@ function nextSamples(previousStorage, files, now, activityLevel) {
   return samples.slice(-MAX_SAMPLES)
 }
 
-/** 扫一次工作区，返回并落盘这个感官的状态。 */
+/** Scan the workspace once; return and persist this sense's state. */
 export async function senseWorkspacePulse({ workspace, now = Date.now() } = {}) {
-  if (!workspace) throw new Error('workspace_pulse 需要一个 workspace 路径')
+  if (!workspace) throw new Error('workspace_pulse requires a workspace path')
 
   const { files, truncated } = await collectFiles(workspace)
   const recent = files
@@ -140,7 +140,7 @@ export async function senseWorkspacePulse({ workspace, now = Date.now() } = {}) 
     scanned_at: new Date(now).toISOString(),
   }
 
-  // 基线用 EMA，避免一次扫描的抖动把 drift 拉满。
+  // Baseline uses an EMA so one jittery scan does not max out drift.
   const baseline = previous
     ? {
         activity_level: round(previous.baseline.activity_level * 0.8 + reading.activity_level * 0.2, 2),
@@ -166,7 +166,7 @@ export async function senseWorkspacePulse({ workspace, now = Date.now() } = {}) 
     reading,
     baseline,
     drift: round(drift, 2),
-    notes: truncated ? `扫描达到 ${MAX_FILES} 个文件上限，读数只覆盖前一部分。` : '',
+    notes: truncated ? `Scan hit the ${MAX_FILES}-file limit; the reading covers only the first part.` : '',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

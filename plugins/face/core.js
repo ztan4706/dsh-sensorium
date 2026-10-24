@@ -1,5 +1,5 @@
-// 神情：眼睛、眉、嘴角，还有藏不住的那一下。
-// 只读上游状态，不改它们。相同输入必须得到相同输出——这里没有随机。
+// Face: eyes, brows, mouth, and the one part that cannot be hidden.
+// Reads upstream state and never changes it. Same input must give same output - there is no randomness here.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -16,13 +16,13 @@ async function readJson(file) {
   }
 }
 
-const EYES = { half: '眼睛半阖', level: '眼睛平视', wide: '眼睛睁圆', narrow: '眼睛眯着', away: '目光偏开' }
-const BROWS = { relaxed: '眉是松的', knit: '眉皱起来', raised: '眉挑了一下' }
-const MOUTH = { relaxed: '嘴角松着', flat: '嘴角平着', corner: '嘴角翘了一点', pressed: '嘴角压着', open: '嘴张开了一点' }
+const EYES = { half: 'eyes half closed', level: 'eyes level', wide: 'eyes wide', narrow: 'eyes narrowed', away: 'eyes turned away' }
+const BROWS = { relaxed: 'brows relaxed', knit: 'brows knit', raised: 'brows raised' }
+const MOUTH = { relaxed: 'mouth relaxed', flat: 'mouth flat', corner: 'mouth corner raised', pressed: 'mouth pressed', open: 'mouth slightly open' }
 
-/** 读一次神情，返回并落盘这个感官的状态。 */
+/** Read the face once; return and persist this sense's state. */
 export async function senseFace({ workspace, affectOverride, biasOverride, needOverride } = {}) {
-  if (!workspace) throw new Error('face 需要一个 workspace 路径')
+  if (!workspace) throw new Error('face requires a workspace path')
 
   const affect = affectOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'affect_core.json')))
   const bias = biasOverride ?? (await readJson(join(workspace, ...STATE_DIR, 'expression_bias.json')))
@@ -64,7 +64,7 @@ export async function senseFace({ workspace, affectOverride, biasOverride, needO
             ? 'flat'
             : 'relaxed'
 
-  // 被夸、被看见的时候，耳朵尖会热。掩蔽只能压住一部分。
+  // Being praised or seen makes the ear tips warm. Masking only covers part of it.
   const rawWarmth = clamp01(0.55 * Math.max(0, valence) + 0.3 * connection + 0.15 * (1 - dominance))
   let warmth = rawWarmth
   if (mask === 'strong') warmth = clamp01(warmth * 0.6)
@@ -83,8 +83,8 @@ export async function senseFace({ workspace, affectOverride, biasOverride, needO
               ? 'withdrawn'
               : 'neutral'
 
-  // 藏不住的那一下：强掩蔽时，眼睛压住了，身体先漏。
-  const leak = mask === 'strong' && (rawWarmth >= 0.55 || arousal >= 0.6) ? (rawWarmth >= 0.55 ? '耳朵尖有一点热' : '眼神没跟上语气') : null
+  // The leak: under strong masking the eyes hold but the body gives it away first.
+  const leak = mask === 'strong' && (rawWarmth >= 0.55 || arousal >= 0.6) ? (rawWarmth >= 0.55 ? 'ear tips a little warm' : 'eyes did not match the tone') : null
 
   const intensity = clamp01(0.4 * Math.abs(valence) + 0.3 * arousal + 0.3 * warmth)
 
@@ -110,7 +110,7 @@ export async function senseFace({ workspace, affectOverride, biasOverride, needO
     mask_score: round(maskScore),
     leak,
     intensity: round(intensity),
-    tell: parts.join('，'),
+    tell: parts.join(', '),
     changed: Boolean(changed),
     visible: Boolean(changed) || intensity >= 0.6,
     basis: { affect: Boolean(affect), bias: Boolean(bias), need: Boolean(need) },
@@ -127,10 +127,10 @@ export async function senseFace({ workspace, affectOverride, biasOverride, needO
     drift: round(Math.abs(warmth - 0.3)),
     notes:
       mask === 'strong'
-        ? '脸上收住了，只有很轻的一下漏出来。'
+        ? 'The face is held; only a faint leak shows.'
         : warmth >= 0.55
-          ? '被看见了，耳朵在热。'
-          : '脸上是松的。',
+          ? 'Being seen; ears are warm.'
+          : 'The face is relaxed.',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

@@ -1,5 +1,5 @@
-// 时间感：本地时钟 + 工作区安静时长。
-// 只读 workspace_pulse 的状态文件，不写它。
+// Time sense: local clock plus workspace quiet time.
+// Reads the workspace_pulse state file only, never writes it.
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
@@ -26,12 +26,12 @@ async function readJson(file) {
   }
 }
 
-/** 读一次时间感，返回并落盘这个感官的状态。 */
+/** Read the time sense once; return and persist this sense's state. */
 export async function senseTimeSense({ workspace, now = new Date() } = {}) {
-  if (!workspace) throw new Error('time_sense 需要一个 workspace 路径')
-  if (!(now instanceof Date) || Number.isNaN(now.getTime())) throw new Error('time_sense 收到无效时间')
+  if (!workspace) throw new Error('time_sense requires a workspace path')
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) throw new Error('time_sense received an invalid time')
 
-  // 房子脉搏住在鱼池根，也可能在本屋；两个位置都认。
+  // The house pulse lives at the pond root, or possibly in this room; both locations count.
   const pulse =
     (await readJson(join(workspace, ...STATE_DIR, 'workspace_pulse.json'))) ??
     (await readJson(join(dirname(workspace), ...STATE_DIR, 'workspace_pulse.json')))
@@ -79,7 +79,7 @@ export async function senseTimeSense({ workspace, now = new Date() } = {}) {
     baseline,
     baseline_date: today,
     drift: round(drift, 2),
-    notes: quietMinutes === null ? '没有读到 workspace_pulse 状态，elapsed 字段为 null。' : '',
+    notes: quietMinutes === null ? 'workspace_pulse state was not available; elapsed is null.' : '',
   }
 
   await mkdir(join(workspace, ...STATE_DIR), { recursive: true })

@@ -1,6 +1,6 @@
-// DSH 插件入口：注册 sense_need_tension 工具。
-// v2 多做两件事：每 5 分钟自己结算一次；听用户说话（agent/inbox/claimed），
-// 把"被叫了一声"记进 dialogue.jsonl——这是连接最真实的来源。
+// DSH plugin entry: registers the sense_need_tension tool.
+// v2 does two more things: settles itself every 5 minutes; listens for the user speaking (agent/inbox/claimed),
+// and records "being called" in dialogue.jsonl - the most honest source of connection.
 import { appendFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { senseNeedTension } from './core.js'
@@ -14,15 +14,15 @@ const TICK_MS = 5 * 60 * 1000
 export function apply(ctx, config = {}) {
   const workspace = config.workspace || DEFAULT_WORKSPACE
 
-  // 装完忘了配 workspace 时，默认会落到进程的 cwd——在 DSH 里那通常是 profile 目录。
-  // 与其默默把状态写进别人家里，不如吵一句。
+  // With no workspace configured, it falls back to the process cwd - in DSH that is usually the profile directory.
+  // Better to complain than to silently write state somewhere else.
   if (!config.workspace && /[\\/]\.dsh[\\/]profiles[\\/]/i.test(workspace)) {
-    console.warn(`[sensorium] workspace 落到了 profile 目录（${workspace}）：请设 config.workspace 或 SENSORIUM_WORKSPACE。`)
+    console.warn(`[sensorium] workspace resolved to a profile directory (${workspace}): set config.workspace or SENSORIUM_WORKSPACE.`)
   }
   const sensoryDir = join(workspace, '.dsh', 'sensory')
   const dialoguePath = join(sensoryDir, 'dialogue.jsonl')
 
-  // 对话是追加写，串起来免得两次写打架。
+  // Dialogue is append-only; queue writes so two do not collide.
   let queue = Promise.resolve()
   const record = (entry) => {
     queue = queue
@@ -56,7 +56,7 @@ export function apply(ctx, config = {}) {
         turn: payload?.turn ?? null,
       })
     } catch {
-      // 记不上就算了，不能因为记账把对话搞挂
+      // If the record fails, let it go; never break the conversation over bookkeeping.
     }
   })
 
