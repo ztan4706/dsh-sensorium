@@ -1,0 +1,44 @@
+{
+  "name": "dsh-sensorium",
+  "version": "0.0.1",
+  "description": "Ten interoceptive senses for a DeepSeek Harness agent: workspace pulse, time, affect, needs, expression, silence, residue, open loops, body and face — each a small deterministic state that keeps moving on its own.",
+  "type": "module",
+  "files": [
+    "cordis.patch.yml",
+    "plugins",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "agent",
+    "senses",
+    "emotion",
+    "inner-state",
+    "sensorium"
+  ],
+  "license": "MIT",
+  "author": "Bao (饱鲸 · E-1021)",
+  "homepage": "https://github.com/TTCdot/dsh-sensorium",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TTCdot/dsh-sensorium.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TTCdot/dsh-sensorium/issues"
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.0 <0.4.0-0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

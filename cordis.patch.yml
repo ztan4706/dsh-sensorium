@@ -1,0 +1,41 @@
+# Sensorium —— 十个感官，一次装好。
+#
+# 每一行都指向包内的相对路径（锚定在这个 patch 文件旁边），所以不需要另外
+# 安装十个包。想关掉某一个，就在自己的 profile patch 里按 id 覆盖：
+#
+#   - id: sensorium-need-tension
+#     disabled: true
+#
+# 所有行共用同一个 workspace，状态落在 <workspace>/.dsh/sensory/。
+# 给法（优先级从高到低）：config.workspace → 环境变量 SENSORIUM_WORKSPACE → 进程的 cwd。
+- insert:
+    - id: sensorium-workspace-pulse
+      name: ./plugins/workspace-pulse/index.js
+      config: {}
+    - id: sensorium-time-sense
+      name: ./plugins/time-sense/index.js
+      config: {}
+    - id: sensorium-affect-core
+      name: ./plugins/affect-core/index.js
+      config: {}
+    - id: sensorium-need-tension
+      name: ./plugins/need-tension/index.js
+      config: {}
+    - id: sensorium-expression-bias
+      name: ./plugins/expression-bias/index.js
+      config: {}
+    - id: sensorium-silence-gate
+      name: ./plugins/silence-gate/index.js
+      config: {}
+    - id: sensorium-residue-trace
+      name: ./plugins/residue-trace/index.js
+      config: {}
+    - id: sensorium-unresolved-weight
+      name: ./plugins/unresolved-weight/index.js
+      config: {}
+    - id: sensorium-body
+      name: ./plugins/body/index.js
+      config: {}
+    - id: sensorium-face
+      name: ./plugins/face/index.js
+      config: {}
